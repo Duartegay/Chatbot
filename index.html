@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatBot com Voz</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #loginScreen, #chatScreen {
+            width: 400px;
+            margin: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        #chatScreen {
+            display: none;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        #chatContainer {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #fafafa;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .message {
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 75%;
+            clear: both;
+        }
+
+        .message.user {
+            background-color: #d1e7dd;
+            margin-left: auto; /* Alinha à direita */
+        }
+
+        .message.bot {
+            background-color: #f8d7da;
+        }
+
+        .notification {
+            font-style: italic;
+            color: #999;
+            text-align: center;
+        }
+
+        input[type="text"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            width: 48%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div id="loginScreen" class="screen">
+        <h1>Bem-vindo ao ChatBot</h1>
+        <input type="text" id="username" placeholder="Digite seu nome de usuário">
+        <button onclick="enterChat()">Entrar</button>
+    </div>
+
+    <div id="chatScreen" class="screen" style="display:none;">
+        <div id="chatContainer" class="chat-container"></div>
+        <input type="text" id="messageInput" placeholder="Digite sua mensagem...">
+        <button onclick="sendMessage()">Enviar</button>
+        <button onclick="startVoiceRecognition()">🎤 Falar</button>
+        <button onclick="addEmoji()">😊 Adicionar Emoji</button>
+    </div>
+
+    <script>
+        let username = "";
+let userColor = "";
+const botName = "ChatBot";
+const botColor = "#007bff";
+
+// Gera uma cor aleatória para cada usuário
+function generateRandomColor() {
+    const letters = '0123456789ABCDEF';
+    let color = '#';
+    for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+}
+
+function enterChat() {
+    username = document.getElementById("username").value;
+    userColor = generateRandomColor();
+    
+    if (username) {
+        document.getElementById("loginScreen").style.display = "none";
+        document.getElementById("chatScreen").style.display = "block";
+        
+        addNotification(`${username} entrou no chat!`);
+    } else {
+        alert("Por favor, insira um nome de usuário.");
+    }
+}
+
+function sendMessage() {
+    const messageInput = document.getElementById("messageInput");
+    const messageText = messageInput.value;
+
+    if (messageText) {
+        displayMessage(username, messageText, userColor);
+        messageInput.value = "";
+
+        // Chama a API do ChatGPT para obter a resposta do bot
+        botResponse(messageText);
+    }
+}
+
+// Função para exibir a mensagem no chat
+function displayMessage(sender, text, color) {
+    const chatContainer = document.getElementById("chatContainer");
+
+    const messageElement = document.createElement("div");
+    messageElement.classList.add("message");
+    messageElement.style.color = color;
+    messageElement.innerHTML = `<strong>${sender}:</strong> ${text}`;
+
+    chatContainer.appendChild(messageElement);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+// Função para gerar a resposta do bot usando a API do ChatGPT
+async function botResponse(userMessage) {
+    try {
+        // Simulação de resposta do ChatGPT
+        const simulatedResponse = await simulateChatGPTResponse(userMessage);
+        
+        displayMessage(botName, simulatedResponse, botColor);
+        speak(simulatedResponse); // Chama a função de fala do bot
+    } catch (error) {
+        console.error('Erro ao obter resposta do bot:', error);
+    }
+}
+
+// Função simulada para gerar uma resposta do ChatGPT
+function simulateChatGPTResponse(message) {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve(`Você disse: "${message}". Essa é uma resposta simulada!`);
+        }, 1000); // Simula um atraso de 1 segundo
+    });
+}
+
+function addNotification(text) {
+    const chatContainer = document.getElementById("chatContainer");
+
+    const notificationElement = document.createElement("div");
+    notificationElement.classList.add("notification");
+    notificationElement.innerText = text;
+
+    chatContainer.appendChild(notificationElement);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function speak(text) {
+    const speech = new SpeechSynthesisUtterance(text);
+    speech.lang = 'pt-PT'; // Define o idioma como português de Portugal
+    window.speechSynthesis.speak(speech);
+}
+
+// Função para iniciar o reconhecimento de voz
+function startVoiceRecognition() {
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'pt-PT'; // Define o idioma como português de Portugal
+    recognition.interimResults = false;
+
+    recognition.onstart = function() {
+        console.log('Reconhecimento de voz iniciado. Fale agora!');
+    };
+
+    recognition.onresult = function(event) {
+        const userMessage = event.results[0][0].transcript;
+        document.getElementById("messageInput").value = userMessage;
+        sendMessage();
+    };
+
+    recognition.onerror = function(event) {
+        console.error('Erro no reconhecimento de voz: ', event.error);
+    };
+
+    recognition.onend = function() {
+        console.log('Reconhecimento de voz encerrado.');
+    };
+
+    recognition.start();
+}
+
+window.addEventListener("beforeunload", function() {
+    addNotification(`${username} saiu do chat!`);
+});
+
+    </script>
+</body>
+</html>
