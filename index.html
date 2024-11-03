@@ -26,10 +26,6 @@
             transition: all 0.3s ease;
         }
 
-        #chatScreen {
-            display: none;
-        }
-
         h1 {
             text-align: center;
             color: #333;
@@ -105,135 +101,117 @@
         <input type="text" id="messageInput" placeholder="Digite sua mensagem...">
         <button onclick="sendMessage()">Enviar</button>
         <button onclick="startVoiceRecognition()">🎤 Falar</button>
-        <button onclick="addEmoji()">😊 Adicionar Emoji</button>
     </div>
 
     <script>
         let username = "";
-let userColor = "";
-const botName = "ChatBot";
-const botColor = "#007bff";
+        const botName = "ChatBot";
+        const botColor = "#007bff";
 
-// Gera uma cor aleatória para cada usuário
-function generateRandomColor() {
-    const letters = '0123456789ABCDEF';
-    let color = '#';
-    for (let i = 0; i < 6; i++) {
-        color += letters[Math.floor(Math.random() * 16)];
-    }
-    return color;
-}
+        function enterChat() {
+            username = document.getElementById("username").value;
+            if (username) {
+                document.getElementById("loginScreen").style.display = "none";
+                document.getElementById("chatScreen").style.display = "block";
+                addNotification(`${username} entrou no chat!`);
+            } else {
+                alert("Por favor, insira um nome de usuário.");
+            }
+        }
 
-function enterChat() {
-    username = document.getElementById("username").value;
-    userColor = generateRandomColor();
-    
-    if (username) {
-        document.getElementById("loginScreen").style.display = "none";
-        document.getElementById("chatScreen").style.display = "block";
-        
-        addNotification(`${username} entrou no chat!`);
-    } else {
-        alert("Por favor, insira um nome de usuário.");
-    }
-}
+        function sendMessage() {
+            const messageInput = document.getElementById("messageInput");
+            const messageText = messageInput.value;
 
-function sendMessage() {
-    const messageInput = document.getElementById("messageInput");
-    const messageText = messageInput.value;
+            if (messageText) {
+                displayMessage(username, messageText, 'user');
+                messageInput.value = "";
 
-    if (messageText) {
-        displayMessage(username, messageText, userColor);
-        messageInput.value = "";
+                // Chama a API do ChatGPT para obter a resposta do bot
+                botResponse(messageText);
+            }
+        }
 
-        // Chama a API do ChatGPT para obter a resposta do bot
-        botResponse(messageText);
-    }
-}
+        function displayMessage(sender, text, type) {
+            const chatContainer = document.getElementById("chatContainer");
+            const messageElement = document.createElement("div");
+            messageElement.classList.add("message", type);
+            messageElement.innerHTML = `<strong>${sender}:</strong> ${text}`;
+            chatContainer.appendChild(messageElement);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
 
-// Função para exibir a mensagem no chat
-function displayMessage(sender, text, color) {
-    const chatContainer = document.getElementById("chatContainer");
+        async function botResponse(userMessage) {
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer YOUR_API_KEY' // Substitua por sua chave API do OpenAI
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-3.5-turbo",
+                        messages: [{ role: "user", content: userMessage }]
+                    })
+                });
 
-    const messageElement = document.createElement("div");
-    messageElement.classList.add("message");
-    messageElement.style.color = color;
-    messageElement.innerHTML = `<strong>${sender}:</strong> ${text}`;
+                if (response.ok) {
+                    const data = await response.json();
+                    const botReply = data.choices[0].message.content;
+                    displayMessage(botName, botReply, 'bot'); // Adiciona a classe 'bot'
+                    speak(botReply); // Chama a função de fala do bot
+                } else {
+                    console.error('Erro ao chamar a API do ChatGPT:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Erro de rede:', error);
+            }
+        }
 
-    chatContainer.appendChild(messageElement);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-}
+        function addNotification(text) {
+            const chatContainer = document.getElementById("chatContainer");
+            const notificationElement = document.createElement("div");
+            notificationElement.classList.add("notification");
+            notificationElement.innerText = text;
+            chatContainer.appendChild(notificationElement);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
 
-// Função para gerar a resposta do bot usando a API do ChatGPT
-async function botResponse(userMessage) {
-    try {
-        // Simulação de resposta do ChatGPT
-        const simulatedResponse = await simulateChatGPTResponse(userMessage);
-        
-        displayMessage(botName, simulatedResponse, botColor);
-        speak(simulatedResponse); // Chama a função de fala do bot
-    } catch (error) {
-        console.error('Erro ao obter resposta do bot:', error);
-    }
-}
+        function speak(text) {
+            const speech = new SpeechSynthesisUtterance(text);
+            speech.lang = 'pt-PT'; // Define o idioma como português de Portugal
+            window.speechSynthesis.speak(speech);
+        }
 
-// Função simulada para gerar uma resposta do ChatGPT
-function simulateChatGPTResponse(message) {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(`Você disse: "${message}". Essa é uma resposta simulada!`);
-        }, 1000); // Simula um atraso de 1 segundo
-    });
-}
+        function startVoiceRecognition() {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'pt-PT'; // Define o idioma como português de Portugal
+            recognition.interimResults = false;
 
-function addNotification(text) {
-    const chatContainer = document.getElementById("chatContainer");
+            recognition.onstart = function() {
+                console.log('Reconhecimento de voz iniciado. Fale agora!');
+            };
 
-    const notificationElement = document.createElement("div");
-    notificationElement.classList.add("notification");
-    notificationElement.innerText = text;
+            recognition.onresult = function(event) {
+                const userMessage = event.results[0][0].transcript;
+                document.getElementById("messageInput").value = userMessage;
+                sendMessage();
+            };
 
-    chatContainer.appendChild(notificationElement);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-}
+            recognition.onerror = function(event) {
+                console.error('Erro no reconhecimento de voz: ', event.error);
+            };
 
-function speak(text) {
-    const speech = new SpeechSynthesisUtterance(text);
-    speech.lang = 'pt-PT'; // Define o idioma como português de Portugal
-    window.speechSynthesis.speak(speech);
-}
+            recognition.onend = function() {
+                console.log('Reconhecimento de voz encerrado.');
+            };
 
-// Função para iniciar o reconhecimento de voz
-function startVoiceRecognition() {
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'pt-PT'; // Define o idioma como português de Portugal
-    recognition.interimResults = false;
+            recognition.start();
+        }
 
-    recognition.onstart = function() {
-        console.log('Reconhecimento de voz iniciado. Fale agora!');
-    };
-
-    recognition.onresult = function(event) {
-        const userMessage = event.results[0][0].transcript;
-        document.getElementById("messageInput").value = userMessage;
-        sendMessage();
-    };
-
-    recognition.onerror = function(event) {
-        console.error('Erro no reconhecimento de voz: ', event.error);
-    };
-
-    recognition.onend = function() {
-        console.log('Reconhecimento de voz encerrado.');
-    };
-
-    recognition.start();
-}
-
-window.addEventListener("beforeunload", function() {
-    addNotification(`${username} saiu do chat!`);
-});
-
+        window.addEventListener("beforeunload", function() {
+            addNotification(`${username} saiu do chat!`);
+        });
     </script>
 </body>
 </html>
